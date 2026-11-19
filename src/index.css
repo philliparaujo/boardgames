@@ -1,0 +1,491 @@
+/* Theme: vintage European railway poster. Every page shares this palette. */
+:root {
+  --bg: #efe6d2; /* parchment */
+  --cream: #faf3e3;
+  --paper: #fffcf5; /* panels */
+  --ink: #2a2118;
+  --muted: #6a5c49;
+  --line: #e0d2b6;
+  --line-strong: #c4b293;
+  --navy: #1d3557;
+  --navy-dark: #14263f;
+  --burgundy: #7a1f2b;
+  --brass: #a87b2a;
+  --gold: #d9a441;
+  --shadow: 0 1px 2px rgba(60, 40, 10, 0.08), 0 3px 10px rgba(60, 40, 10, 0.07);
+  --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.45;
+  margin: 0;
+  padding: 16px;
+  color: var(--ink);
+  background-color: var(--bg);
+  /* Faint diagonal paper grain. */
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.18) 0 2px,
+    transparent 2px 6px
+  );
+}
+
+h1,
+h2 {
+  font-family: var(--font-display);
+  color: var(--navy);
+}
+
+a {
+  color: var(--navy);
+  font-weight: 600;
+}
+
+a:hover {
+  color: var(--burgundy);
+}
+
+main {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+section {
+  margin: 16px 0;
+}
+
+li {
+  margin: 4px 0;
+}
+
+code {
+  font-size: 0.85em;
+  color: var(--muted);
+}
+
+[role="alert"] {
+  color: #a4161a;
+}
+
+:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* Shared form controls and buttons for menu pages. */
+button,
+input,
+select {
+  font: inherit;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 6px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong);
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--cream);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  color: var(--ink);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--navy-dark);
+  color: #fff;
+}
+
+.btn-small {
+  min-height: 30px;
+  padding: 3px 10px;
+  font-size: 13px;
+}
+
+.field {
+  min-height: 38px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong);
+  background: #fff;
+  color: var(--ink);
+}
+
+.panel {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+
+.panel h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+/* Poster-style brand mark used on Home and Lobby. */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: var(--gold);
+  font-size: 26px;
+  box-shadow: inset 0 0 0 3px var(--navy), inset 0 0 0 5px var(--gold);
+}
+
+.brand-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 30px;
+  letter-spacing: 0.02em;
+  color: var(--navy);
+  line-height: 1.1;
+}
+
+.brand-tag {
+  margin: 2px 0 0;
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--burgundy);
+  font-weight: 700;
+}
+
+/* Home */
+.home {
+  max-width: 460px;
+  min-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.home-ticket {
+  position: relative;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 28px 28px 24px;
+  box-shadow: 0 2px 4px rgba(60, 40, 10, 0.08), 0 14px 40px rgba(60, 40, 10, 0.14);
+  border-top: 8px solid var(--navy);
+}
+
+/* A perforated "ticket stub" at the bottom of the card. */
+.home-stub {
+  margin: 22px -28px -24px;
+  padding: 12px 28px;
+  border-top: 2px dashed var(--line-strong);
+  background: var(--cream);
+  border-radius: 0 0 14px 14px;
+}
+
+.home-ticket .brand {
+  margin-bottom: 18px;
+}
+
+.home-intro {
+  margin: 0 0 18px;
+  color: var(--muted);
+}
+
+.home-form label {
+  display: block;
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.home-form-row {
+  display: flex;
+  gap: 8px;
+}
+
+.home-form-row .field {
+  flex: 1;
+  min-width: 0;
+}
+
+.home-foot {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* Lobby */
+.lobby-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 14px;
+  margin-bottom: 18px;
+  border-bottom: 3px double var(--line-strong);
+}
+
+.lobby-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.lobby-user-name {
+  font-weight: 700;
+}
+
+.lobby-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.lobby-grid section,
+.lobby-wide {
+  margin: 0;
+}
+
+.lobby-wide {
+  margin-top: 16px;
+}
+
+.game-type {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.game-type:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.game-type-title {
+  flex: 1 1 160px;
+  font-weight: 700;
+}
+
+.game-type-title small {
+  display: block;
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.game-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.game-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.game-list li:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.game-list-title {
+  flex: 1 1 160px;
+  font-weight: 600;
+}
+
+.game-list-meta {
+  display: block;
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.pill {
+  display: inline-block;
+  padding: 1px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  background: var(--cream);
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+}
+
+.pill-waiting {
+  background: #fff4d6;
+  border-color: var(--gold);
+  color: #6b4a00;
+}
+
+.pill-started {
+  background: #e5edf7;
+  border-color: #9fb6d6;
+  color: var(--navy);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.panel-head h2 {
+  margin: 0;
+}
+
+/* Game screens use the full window width; the 900px cap is for menu pages. */
+main.game-page {
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.game-header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.game-header h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.game-header-meta {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.game-header > a {
+  text-decoration: none;
+}
+
+.game-header > a:hover {
+  text-decoration: underline;
+}
+
+/* Header buttons (Join game, rejoin seats) use the shared button look. */
+.game-header button {
+  min-height: 30px;
+  padding: 3px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong);
+  background: var(--paper);
+  color: var(--navy);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.game-header button:hover {
+  background: var(--cream);
+  border-color: var(--navy);
+}
+
+.game-header-rejoin {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 3px 4px 3px 12px;
+  border-radius: 999px;
+  background: var(--cream);
+  border: 1px dashed var(--line-strong);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.game-header-rejoin button {
+  border-radius: 999px;
+}
+
+.game-body {
+  flex: 1;
+  min-height: 0;
+}
+
+/* On wide screens the game fills the window height exactly, with no page scroll. */
+@media (min-width: 1000px) {
+  main.game-page {
+    height: calc(100vh - 32px); /* body has 16px padding top and bottom */
+  }
+}
+
+@media (max-width: 600px) {
+  body {
+    padding: 12px;
+  }
+  .home {
+    min-height: calc(100vh - 24px);
+  }
+  .home-ticket {
+    padding: 22px 18px 20px;
+  }
+  .home-stub {
+    margin: 20px -18px -20px;
+    padding: 12px 18px;
+  }
+  .brand-title {
+    font-size: 25px;
+  }
+}
