@@ -1,7 +1,7 @@
 import { GameDoc } from "../../types";
 import { CITIES, ROUTES, RouteData } from "./map/europe";
 import { LONG_TICKET_IDS, REGULAR_TICKET_IDS } from "./map/tickets";
-import { buildTrainDeck, shuffle } from "./deck";
+import { buildTrainDeck, cardLabel, shuffle } from "./deck";
 import { scoreGame } from "./scoring";
 import { CARD_COLORS, CardColor, TTRAction, TTRState } from "./types";
 
@@ -216,13 +216,16 @@ function drawFaceUp(s: TTRState, playerId: string, slot: number) {
   const card = s.faceUp[slot];
   if (card === undefined) throw new Error("No card in that slot");
   if (card === "loco" && s.drawnThisTurn === 1) {
-    throw new Error("You can't take a locomotive as a second card");
+    throw new Error("You can't take a rainbow as a second card");
   }
 
-  s.faceUp.splice(slot, 1);
   s.hands[playerId].push(card);
+  addLog(s, playerId, `drew a ${cardLabel(card)} card from the face-up row`);
+  // The replacement goes in the same slot, so the other face-up cards don't move.
+  const next = drawCard(s);
+  if (next) s.faceUp[slot] = next;
+  else s.faceUp.splice(slot, 1);
   refillFaceUp(s);
-  addLog(s, playerId, `drew a ${card} card from the face-up row`);
 
   s.drawnThisTurn++;
   // A face-up locomotive is the only card drawn this turn.
@@ -286,14 +289,14 @@ function claimRoute(s: TTRState, playerId: string, routeId: string, payment: Car
 
   const locos = payment.filter((c) => c === "loco").length;
   if (locos < route.locos) {
-    throw new Error(`This ferry needs ${route.locos} locomotive(s)`);
+    throw new Error(`This ferry needs ${route.locos} rainbow card(s)`);
   }
   const nonLoco = payment.filter((c) => c !== "loco");
   if (route.color !== "gray" && nonLoco.some((c) => c !== route.color)) {
-    throw new Error(`Payment must be ${route.color} (or locomotives)`);
+    throw new Error(`Payment must be ${route.color} (or rainbows)`);
   }
   if (route.color === "gray" && new Set(nonLoco).size > 1) {
-    throw new Error("Gray routes need cards of a single color (or locomotives)");
+    throw new Error("Gray routes need cards of a single color (or rainbows)");
   }
   // The color the cards were played in. Paid only with locomotives: "loco".
   const payColor: CardColor = nonLoco[0] ?? "loco";
@@ -303,7 +306,7 @@ function claimRoute(s: TTRState, playerId: string, routeId: string, payment: Car
 
   if (!route.tunnel) {
     s.discard.push(...payment);
-    completeClaim(s, playerId, route);
+    completeClaim(s, playerId, route, payment);
     endTurn(s);
     return;
   }
@@ -321,13 +324,13 @@ function claimRoute(s: TTRState, playerId: string, routeId: string, payment: Car
   addLog(
     s,
     null,
-    `Tunnel at ${route.from}–${route.to}: revealed ${revealed.join(", ") || "nothing"}` +
+    `Tunnel at ${route.from}–${route.to}: revealed ${revealed.map(cardLabel).join(", ") || "nothing"}` +
       (extra > 0 ? `; ${extra} extra card(s) needed` : "; no extra cards needed"),
   );
 
   if (extra === 0) {
     s.discard.push(...payment, ...revealed);
-    completeClaim(s, playerId, route);
+    completeClaim(s, playerId, route, payment);
     endTurn(s);
     return;
   }
@@ -360,16 +363,15 @@ function payTunnel(s: TTRState, playerId: string, payment: CardColor[]) {
   if (!payment.every((c) => matchesTunnel(c, t.payColor))) {
     throw new Error(
       t.payColor === "loco"
-        ? "The extra cards must be locomotives"
-        : `The extra cards must be ${t.payColor} (or locomotives)`,
+        ? "The extra cards must be rainbows"
+        : `The extra cards must be ${t.payColor} (or rainbows)`,
     );
   }
   takeFromHand(s, playerId, payment);
   const route = ROUTES.find((r) => r.id === t.routeId) as RouteData;
   s.discard.push(...t.payment, ...payment, ...t.revealed);
   s.pendingTunnel = null;
-  addLog(s, playerId, `paid ${t.extra} extra card(s) for the tunnel`);
-  completeClaim(s, playerId, route);
+  completeClaim(s, playerId, route, [...t.payment, ...payment], t.extra);
   endTurn(s);
 }
 
@@ -383,10 +385,18 @@ function declineTunnel(s: TTRState, playerId: string) {
   endTurn(s);
 }
 
-function completeClaim(s: TTRState, playerId: string, route: RouteData) {
+function completeClaim(
+  s: TTRState,
+  playerId: string,
+  route: RouteData,
+  paid: CardColor[],
+  tunnelExtra = 0,
+) {
   s.owners[route.id] = playerId;
   s.trains[playerId] -= route.length;
-  addLog(s, playerId, `claimed ${route.from}–${route.to} (${route.length})`);
+  const extra = tunnelExtra > 0 ? ` (${tunnelExtra} extra for the tunnel)` : "";
+  // The view shows `cards` as card swatches after the text.
+  addLog(s, playerId, `claimed ${route.from}–${route.to} (${route.length})${extra}`, paid);
 }
 
 // A station costs 1, 2, then 3 cards for a player's first, second, and third station.
@@ -403,13 +413,13 @@ function placeStation(s: TTRState, playerId: string, city: string, payment: Card
   const cost = owned + 1;
   if (payment.length !== cost) throw new Error(`Your next station costs ${cost} card(s)`);
   if (new Set(payment.filter((c) => c !== "loco")).size > 1) {
-    throw new Error("Station payment must be one color (or locomotives)");
+    throw new Error("Station payment must be one color (or rainbows)");
   }
 
   takeFromHand(s, playerId, payment);
   s.discard.push(...payment);
   s.stations[city] = playerId;
-  addLog(s, playerId, `built a station in ${city}`);
+  addLog(s, playerId, `built a station in ${city}`, payment);
   endTurn(s);
 }
 
@@ -497,6 +507,7 @@ function drawCard(s: TTRState): CardColor | null {
     if (s.discard.length === 0) return null;
     s.deck = shuffle(s.discard);
     s.discard = [];
+    addLog(s, null, `The deck ran out: ${s.deck.length} discarded cards were shuffled into a new deck`);
   }
   return s.deck.pop() ?? null;
 }
@@ -516,6 +527,7 @@ function refillFaceUp(s: TTRState) {
     const nonLoco = pool.filter((c) => c !== "loco").length;
     const rowSize = Math.min(FACE_UP_COUNT, pool.length);
     if (nonLoco < rowSize - 2 || resets >= MAX_FACE_UP_RESETS) return;
+    if (resets === 0) addLog(s, null, "3 rainbows were face up, so all 5 face-up cards were replaced");
     s.discard.push(...s.faceUp);
     s.faceUp = [];
   }
@@ -525,8 +537,9 @@ function takeTickets(s: TTRState, n: number): number[] {
   return s.ticketDeck.splice(0, n);
 }
 
-function addLog(s: TTRState, by: string | null, text: string) {
-  s.log.push({ by, text });
+function addLog(s: TTRState, by: string | null, text: string, cards?: CardColor[]) {
+  // Firestore rejects undefined fields, so `cards` is only set when there are some.
+  s.log.push(cards?.length ? { by, text, cards: [...cards] } : { by, text });
   if (s.log.length > LOG_LIMIT) s.log.splice(0, s.log.length - LOG_LIMIT);
 }
 

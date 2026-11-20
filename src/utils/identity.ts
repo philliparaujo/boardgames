@@ -11,15 +11,33 @@ const ID_KEY = "boardgames.playerId";
 // players in one browser. A player who loses their tab can take their seat back
 // with "Rejoin as" on the game page (see takeSeat).
 
-// "Log in": store a display name and a player id (created once, then reused).
-export function login(name: string): GamePlayer {
-  let id = sessionStorage.getItem(ID_KEY);
-  if (!id) {
-    id = uuidv4();
-    sessionStorage.setItem(ID_KEY, id);
+export const MAX_ID_LENGTH = 64;
+
+// Why a custom player id can't be used, or null if it's fine.
+export function playerIdError(id: string): string | null {
+  if (id.length > MAX_ID_LENGTH) return `Player ID must be at most ${MAX_ID_LENGTH} characters.`;
+  if (/\s/.test(id)) return "Player ID can't contain spaces.";
+  return null;
+}
+
+// "Log in": store a display name and a player id. With `customId`, that id is used
+// (e.g. to get back into a game after disconnecting); otherwise the tab's existing
+// id is reused, or a new random one is created.
+export function login(name: string, customId?: string): GamePlayer {
+  const custom = customId?.trim();
+  if (custom) {
+    const error = playerIdError(custom);
+    if (error) throw new Error(error);
   }
+  const id = custom || sessionStorage.getItem(ID_KEY) || uuidv4();
+  sessionStorage.setItem(ID_KEY, id);
   sessionStorage.setItem(NAME_KEY, name);
   return { id, name };
+}
+
+// The id this tab will use, if it has one (even when not logged in with a name).
+export function getStoredId(): string | null {
+  return sessionStorage.getItem(ID_KEY);
 }
 
 // Become an existing player (id and name), e.g. to get back into a game after

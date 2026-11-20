@@ -137,7 +137,11 @@ function Game() {
         <h2>{definition.title}</h2>
         <span className="game-header-meta">
           {game.players.length}/{game.maxPlayers} players · {status} ·{" "}
-          {isMember ? "You're in this game" : isFull ? "Full" : "Not joined"}
+          {isMember ? "You're in this game" : isFull ? "Full" : "Not joined"} · You:{" "}
+          {player.name}{" "}
+          <code className="player-id" title="Use this ID on the home page to get back into this game">
+            {player.id}
+          </code>
         </span>
         {canJoin && <button onClick={join}>Join game</button>}
         {isMember && game.status === "waiting" && <button onClick={leave}>Leave game</button>}

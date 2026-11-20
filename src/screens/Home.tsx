@@ -1,7 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { GAME_DEFINITIONS } from "../games/registry";
-import { getPlayer, login } from "../utils/identity";
+import { getPlayer, getStoredId, login, MAX_ID_LENGTH, playerIdError } from "../utils/identity";
 import { LOBBY_PATH } from "../utils/navigation";
 
 // Poster-style brand mark shared by Home and Lobby.
@@ -26,12 +26,14 @@ function Home() {
   const from = (location.state as { from?: unknown } | null)?.from;
   const next = typeof from === "string" && from.startsWith("/") ? from : LOBBY_PATH;
   const [name, setName] = useState(() => getPlayer()?.name ?? "");
+  const [playerId, setPlayerId] = useState(() => getStoredId() ?? "");
+  const idError = playerIdError(playerId.trim());
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const trimmed = name.trim();
-    if (!trimmed) return;
-    login(trimmed);
+    if (!trimmed || idError) return;
+    login(trimmed, playerId);
     navigate(next);
   };
 
@@ -61,10 +63,33 @@ function Home() {
               autoComplete="nickname"
               autoFocus
             />
-            <button type="submit" className="btn btn-primary" disabled={!name.trim()}>
+            <button type="submit" className="btn btn-primary" disabled={!name.trim() || !!idError}>
               Continue →
             </button>
           </div>
+          <label htmlFor="home-id" style={{ marginTop: 12 }}>
+            Player ID <span className="muted">(optional)</span>
+          </label>
+          <input
+            id="home-id"
+            className="field"
+            value={playerId}
+            onChange={(e) => setPlayerId(e.target.value)}
+            maxLength={MAX_ID_LENGTH}
+            placeholder="Leave blank for a new random ID"
+            autoComplete="off"
+            spellCheck={false}
+          />
+          {idError ? (
+            <p role="alert" className="home-hint">
+              {idError}
+            </p>
+          ) : (
+            <p className="home-hint muted">
+              Disconnected? Enter the ID you played with to get your seat back. Pick something
+              memorable, like "ada-42", so you can reuse it.
+            </p>
+          )}
         </form>
         <div className="home-stub">
           <p className="home-foot">

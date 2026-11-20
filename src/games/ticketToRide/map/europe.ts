@@ -165,7 +165,7 @@ const ROUTE_SPECS: RouteSpec[] = [
   ["Venezia", "Roma", 2, "black", 0, false],
   ["Roma", "Brindisi", 2, "white", 0, false],
   ["Roma", "Palermo", 4, "gray", 1, false],
-  ["Brindisi", "Athina", 4, "gray", 4, false],
+  ["Brindisi", "Athina", 4, "gray", 1, false],
   ["Brindisi", "Palermo", 3, "gray", 1, false],
   ["Palermo", "Smyrna", 6, "gray", 2, false],
   ["Sofia", "Athina", 3, "pink", 0, false],

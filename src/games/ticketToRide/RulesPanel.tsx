@@ -9,7 +9,7 @@ export function RulesPanel() {
       <h4>Setup</h4>
       <ul>
         <li>Each player starts with 45 trains, 3 stations and 4 train cards.</li>
-        <li>Five cards are face-up. If 3 or more of them are locomotives, all five are discarded and replaced.</li>
+        <li>Five cards are face-up. If 3 or more of them are rainbows, all five are discarded and replaced.</li>
         <li>
           Each player is dealt 1 long route ticket and 3 regular tickets and must keep at least 2. Tickets not
           kept are removed from the game.
@@ -21,7 +21,7 @@ export function RulesPanel() {
       <ul>
         <li>
           <strong>Draw train cards:</strong> take two cards, from the face-up row or the deck. Taking a face-up
-          locomotive ends your draw, and you can't take one as your second card. A locomotive drawn blind from
+          rainbow ends your draw, and you can't take one as your second card. A rainbow drawn blind from
           the deck counts as a normal card. When the deck runs out, the discards are shuffled into a new deck.
         </li>
         <li>
@@ -30,19 +30,19 @@ export function RulesPanel() {
         </li>
         <li>
           <strong>Claim a route:</strong> pay with cards matching its color (gray accepts any single color), plus
-          locomotives as wild cards. Ferries need a locomotive for each locomotive symbol.
+          rainbows as wild cards. Ferries need a rainbow card for each white dot on the route.
         </li>
         <li>
           <strong>Build a station:</strong> in any city that doesn't have one. Your first costs 1 card, the
-          second 2, the third 3, all of one color (locomotives are wild).
+          second 2, the third 3, all of one color (rainbows are wild).
         </li>
       </ul>
 
       <h4>Tunnels</h4>
       <p>
         After you lay down the cards, the top 3 cards of the deck are revealed. Each one matching the color you
-        played, or any locomotive, costs one more card of that color (or a locomotive). If you paid only with
-        locomotives, only revealed locomotives count, and you must pay them with locomotives. If you can't or
+        played, or any rainbow, costs one more card of that color (or a rainbow). If you paid only with
+        rainbows, only revealed rainbows count, and you must pay them with rainbows. If you can't or
         won't pay, you take your cards back and your turn ends.
       </p>
 

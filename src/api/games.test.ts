@@ -68,6 +68,9 @@ jest.mock("firebase/firestore", () => {
     setDoc: async (ref: { id: string }, data: GameDoc) => {
       mockStore.set(ref.id, data);
     },
+    deleteDoc: async (ref: { id: string }) => {
+      mockStore.delete(ref.id);
+    },
     getDocs: async () => ({
       docs: Array.from(mockStore.keys())
         .map(snap)
@@ -116,6 +119,7 @@ jest.mock("firebase/firestore", () => {
 import {
   applyAction,
   createGame,
+  deleteGame,
   dispatchAction,
   friendlyError,
   joinGame,
@@ -269,6 +273,14 @@ describe("createGame / listGames", () => {
     mockStore.set("fresh", { ...seed({ status: "waiting" }) });
     const ids = (await listGames()).map((g) => g.id).sort();
     expect(ids).toEqual(["fresh", "g1", "oldButActive"]);
+    const all = (await listGames({ includeStale: true })).map((g) => g.id).sort();
+    expect(all).toEqual(["fresh", "g1", "oldButActive", "stale"]);
+  });
+
+  it("deletes a game", async () => {
+    mockStore.set("doomed", { ...seed({ status: "started" }) });
+    await deleteGame("doomed");
+    expect(mockStore.has("doomed")).toBe(false);
   });
 });
 

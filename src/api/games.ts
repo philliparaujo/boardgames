@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   doc,
   FirestoreError,
   getDocs,
@@ -182,9 +183,22 @@ export async function dispatchAction(
   return { ...written, id: gameId };
 }
 
-// Most recent games, newest first. Waiting games that have been idle for a day are
-// left out (they were most likely abandoned).
-export async function listGames(): Promise<GameRecord[]> {
+// Permanently delete a game, whatever its status. Used by the lobby to clear out old
+// or abandoned games.
+export async function deleteGame(gameId: string): Promise<void> {
+  requireOnline();
+  await ensureSignedIn();
+  await withFriendlyErrors(deleteDoc(doc(db, COLLECTION, gameId)));
+}
+
+// True for a waiting game that has been idle long enough that it was likely abandoned.
+export function isStale(game: GameDoc, now = Date.now()): boolean {
+  return game.status === "waiting" && (game.updatedAt ?? game.createdAt) < now - STALE_WAITING_MS;
+}
+
+// Most recent games, newest first. Stale waiting games are left out unless
+// `includeStale` is set (the lobby includes them so they can be deleted).
+export async function listGames({ includeStale = false } = {}): Promise<GameRecord[]> {
   await ensureSignedIn();
 
   const q = query(
@@ -193,10 +207,10 @@ export async function listGames(): Promise<GameRecord[]> {
     limit(LIST_LIMIT),
   );
   const snapshot = await withFriendlyErrors(getDocs(q));
-  const cutoff = Date.now() - STALE_WAITING_MS;
+  const now = Date.now();
   return snapshot.docs
     .map((d) => ({ ...(d.data() as GameDoc), id: d.id }))
-    .filter((g) => g.status !== "waiting" || (g.updatedAt ?? g.createdAt) >= cutoff);
+    .filter((g) => includeStale || !isStale(g, now));
 }
 
 // Live updates for one game. Calls `onChange` with null if the game doesn't exist,

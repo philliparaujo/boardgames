@@ -134,7 +134,7 @@ describe("claiming routes", () => {
     game = withHand(game, "a", hand);
     expect(() =>
       reduce(game, { type: "claimRoute", routeId: ferry.id, payment: hand }, "a"),
-    ).toThrow(/locomotive/);
+    ).toThrow(/rainbow/);
   });
 
   it("only one route between a pair in a 2-player game", () => {
@@ -243,7 +243,21 @@ describe("drawing train cards", () => {
 
     game = reduce(game, { type: "drawFaceUp", slot: 1 }, "a");
     const loco = stateOf(game).faceUp.indexOf("loco");
-    expect(() => reduce(game, { type: "drawFaceUp", slot: loco }, "a")).toThrow(/locomotive as a second/);
+    expect(() => reduce(game, { type: "drawFaceUp", slot: loco }, "a")).toThrow(/rainbow as a second/);
+  });
+
+  it("a taken face-up card is replaced in the same slot; the others don't move", () => {
+    let game = playingGame(["a", "b"]);
+    game = patch(game, { faceUp: ["red", "blue", "green", "white", "black"], deck: ["yellow", "orange"], discard: [] });
+    game = reduce(game, { type: "drawFaceUp", slot: 1 }, "a");
+    expect(stateOf(game).faceUp).toEqual(["red", "orange", "green", "white", "black"]);
+  });
+
+  it("logs a deck reshuffle", () => {
+    let game = playingGame(["a", "b"]);
+    game = patch(game, { deck: [], discard: ["red", "red", "blue"] });
+    game = reduce(game, { type: "drawDeck" }, "a");
+    expect(stateOf(game).log.some((e) => /shuffled into a new deck/.test(e.text))).toBe(true);
   });
 
   it("three face-up locomotives: all five are discarded and replaced", () => {
@@ -348,7 +362,7 @@ describe("tunnels", () => {
     let game = tunnelGame(["loco", "loco", "loco", "loco", "loco", "blue"], ["blue", "blue", "loco"]);
     game = reduce(game, { type: "claimRoute", routeId: tunnel.id, payment: ["loco", "loco", "loco", "loco"] }, "a");
     expect(stateOf(game).pendingTunnel!.extra).toBe(1);
-    expect(() => reduce(game, { type: "payTunnel", payment: ["blue"] }, "a")).toThrow(/locomotives/);
+    expect(() => reduce(game, { type: "payTunnel", payment: ["blue"] }, "a")).toThrow(/rainbows/);
     game = reduce(game, { type: "payTunnel", payment: ["loco"] }, "a");
     expect(stateOf(game).owners[tunnel.id]).toBe("a");
   });

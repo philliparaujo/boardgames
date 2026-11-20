@@ -250,6 +250,59 @@ select {
   min-width: 0;
 }
 
+.home-form label[for="home-id"] {
+  margin-top: 14px;
+}
+
+.home-form > .field {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.home-hint {
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+
+/* A player's id, shown so it can be reused to rejoin. */
+.player-id {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  color: var(--muted);
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  padding: 0 4px;
+  word-break: break-all;
+}
+
+.player-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 2px;
+}
+
+.btn-danger {
+  color: var(--burgundy);
+  border-color: var(--burgundy);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--burgundy);
+  color: #fff;
+}
+
+.lobby-other summary {
+  cursor: pointer;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.lobby-other[open] summary {
+  margin-bottom: 12px;
+}
+
 .home-foot {
   margin: 0;
   font-size: 13px;
@@ -319,6 +372,52 @@ select {
   font-weight: 400;
   color: var(--muted);
   font-size: 13px;
+}
+
+/* Game picker: one card per game, the chosen one highlighted. */
+.game-picker {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  margin-bottom: 12px;
+}
+
+.game-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: var(--paper, #fff);
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.game-choice:hover {
+  border-color: var(--brass, #a87b2a);
+}
+
+.game-choice-on {
+  border-color: var(--burgundy, #7a1f2b);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--burgundy, #7a1f2b) 18%, transparent);
+}
+
+.game-choice-title {
+  font-weight: 700;
+}
+
+.game-choice small {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.game-choice-summary {
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .game-list {

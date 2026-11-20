@@ -1,5 +1,19 @@
 import { CardColor, TRAIN_COLORS } from "./types";
 
+// Display name of a card. Locomotives are called "rainbow" everywhere players see them.
+export function cardLabel(c: CardColor): string {
+  return c === "loco" ? "rainbow" : c;
+}
+
+// A payment as text, e.g. "3 red + 1 rainbow".
+export function describeCards(cards: CardColor[]): string {
+  const counts = new Map<CardColor, number>();
+  for (const c of cards) counts.set(c, (counts.get(c) ?? 0) + 1);
+  // Colors first, rainbows last.
+  const entries = Array.from(counts).sort(([a], [b]) => Number(a === "loco") - Number(b === "loco"));
+  return entries.map(([c, n]) => `${n} ${cardLabel(c)}`).join(" + ") || "nothing";
+}
+
 // 12 cards per color plus 14 locomotives.
 export function buildTrainDeck(): CardColor[] {
   const cards: CardColor[] = [];

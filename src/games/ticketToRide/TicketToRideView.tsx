@@ -12,12 +12,14 @@ import {
   PlayersTable,
   playerColor,
   Results,
+  PlayerFocus,
   TicketHover,
   TicketList,
   TicketOfferPanel,
   winners,
 } from "./TicketToRidePanels";
-import { TTRState, TrainColor } from "./types";
+import { CardColor, TTRState, TrainColor } from "./types";
+import { cardLabel, describeCards } from "./deck";
 import { RulesPanel } from "./RulesPanel";
 import * as rules from "./rules";
 import { routeBlockReason } from "./rules";
@@ -96,6 +98,13 @@ const LAYOUT_CSS = `
 .ttr-deck-btn .ttr-deck { width: 20px; height: 28px; border-width: 1px; flex: none; }
 .ttr-deck-count { margin-left: auto; font-size: 12px; font-weight: 400; opacity: 0.75; }
 .ttr-hand { display: flex; flex-wrap: wrap; gap: 5px; }
+.ttr-drawn { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 6px 10px; border-radius: 8px; border: 2px solid var(--gold); background: var(--cream); font-weight: 700; font-size: 14px; animation: ttr-drawn 1.6s ease-out; }
+.ttr-drawn .ttr-cardface { animation: ttr-newcard 2.4s ease-out; }
+.ttr-drawn-names { font-weight: 400; color: var(--muted); text-transform: capitalize; }
+@keyframes ttr-drawn { 0% { transform: scale(.9); opacity: 0; } 20% { transform: scale(1.04); opacity: 1; } 100% { transform: none; } }
+.ttr-log-paid { white-space: nowrap; }
+.ttr-log-paid .ttr-pay { display: inline-flex; vertical-align: middle; gap: 2px 8px; font-size: 12px; }
+.ttr-log-paid .ttr-pay-swatch { width: 10px; height: 13px; }
 .ttr-pay { display: inline-flex; flex-wrap: wrap; gap: 4px 10px; }
 .ttr-pay-item { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
 .ttr-pay-swatch { display: inline-block; width: 12px; height: 16px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,.45); }
@@ -154,7 +163,15 @@ const LAYOUT_CSS = `
 
 /* Map */
 .ttr-board-info { min-height: 30px; padding: 5px 10px; margin-bottom: 6px; background: var(--cream); border: 1px solid var(--line); border-radius: 8px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ttr-legend { font-size: 12.5px; color: var(--muted); margin-top: 6px; display: flex; gap: 6px 16px; flex-wrap: wrap; align-items: center; }
+.ttr-players tbody tr[tabindex] { cursor: pointer; outline: none; }
+.ttr-players tbody tr.ttr-player-focus td { background: color-mix(in srgb, var(--brass, #c9a227) 22%, transparent); }
+.ttr-player-tickets { margin: 2px 0; }
+.ttr-player-tickets summary { cursor: pointer; padding: 3px 0; }
+.ttr-player-tickets summary .ttr-player-name { display: inline-flex; }
+.ttr-player-tickets .ttr-tickets { margin-bottom: 6px; }
+.ttr-legend {font-size: 12.5px; color: var(--muted); margin-top: 6px; display: flex; gap: 6px 16px; flex-wrap: wrap; align-items: center; }
+.ttr-ticket-pulse { transform-box: fill-box; transform-origin: center; animation: ttr-ticket-pulse 1.3s ease-out infinite; }
+@keyframes ttr-ticket-pulse { 0% { transform: scale(1); opacity: .9; } 100% { transform: scale(2.1); opacity: 0; } }
 .ttr-recent { animation: ttr-recent 4.5s ease-out forwards; }
 @keyframes ttr-recent { 0% { opacity: .95; } 15% { opacity: .25; } 30% { opacity: .95; } 45% { opacity: .25; } 60% { opacity: .9; } 100% { opacity: 0; } }
 .ttr-gameover { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3; width: min(420px, calc(100% - 32px)); text-align: center; background: var(--paper); border: 3px double var(--gold); border-radius: 14px; padding: 20px 24px; box-shadow: 0 12px 40px rgba(0,0,0,.3); }
@@ -165,7 +182,7 @@ const LAYOUT_CSS = `
 .ttr-waiting li { margin: 0; padding: 4px 12px; border-radius: 999px; background: var(--cream); border: 1px solid var(--line); font-weight: 600; }
 
 @media (prefers-reduced-motion: reduce) {
-  .ttr-recent, .ttr-cardbtn-new .ttr-cardface { animation: none; }
+  .ttr-recent, .ttr-cardbtn-new .ttr-cardface, .ttr-drawn, .ttr-drawn .ttr-cardface, .ttr-ticket-pulse { animation: none; }
   .ttr-btn, .ttr-cardbtn { transition: none; }
 }
 
@@ -201,18 +218,23 @@ export function TicketToRideView({ game, playerId, onAction }: GameViewProps) {
   const [grayColor, setGrayColor] = useState<TrainColor | null>(null);
   const [stationMode, setStationMode] = useState(false);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
-  // undefined = automatic choice; null = pay with locomotives only.
+  // undefined = automatic choice; null = pay with rainbows only.
   const [stationColor, setStationColor] = useState<TrainColor | null | undefined>(undefined);
   const [keepIds, setKeepIds] = useState<number[]>([]);
   // Ticket hovered (or tapped) in a ticket list; its endpoints are highlighted on the map.
   const [hoveredTicket, setHoveredTicket] = useState<number | null>(null);
   const highlightTicket = hoveredTicket !== null ? TICKETS[hoveredTicket] ?? null : null;
   const ticketHover: TicketHover = { active: hoveredTicket, set: setHoveredTicket };
+  // Player hovered in the players or results table; their pieces are highlighted on the map.
+  const [focusedPlayer, setFocusedPlayer] = useState<string | null>(null);
+  const playerFocus: PlayerFocus = { active: focusedPlayer, set: setFocusedPlayer };
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [muted, setMutedState] = useState(isMuted);
   const [recent, setRecent] = useState<Recent | null>(null);
   const [overlayClosed, setOverlayClosed] = useState(false);
+  // Cards I drew this turn (shown face up, so a blind draw's color is obvious).
+  const [drawnCards, setDrawnCards] = useState<{ cards: CardColor[]; key: number }>({ cards: [], key: 0 });
 
   // Audio can only start after a user gesture; unlock it on the first click or key.
   useEffect(() => {
@@ -243,6 +265,29 @@ export function TicketToRideView({ game, playerId, onAction }: GameViewProps) {
       .filter((i) => i >= 0);
     if (routeId || city || slots.length) {
       setRecent((r) => ({ routeId, city, slots, key: (r?.key ?? 0) + 1 }));
+    }
+
+    // Cards I just drew. On my turn the hand only grows by drawing, except when a tunnel
+    // is given up and its cards come back.
+    const mine = (st: TTRState) => st.phase === "playing" && st.order[st.current] === playerId;
+    const drewNow =
+      mine(prev) &&
+      !prev.pendingTunnel &&
+      (next.hands[playerId]?.length ?? 0) > (prev.hands[playerId]?.length ?? 0);
+    if (drewNow) {
+      const gained = [...(next.hands[playerId] ?? [])];
+      for (const c of prev.hands[playerId] ?? []) {
+        const i = gained.indexOf(c);
+        if (i !== -1) gained.splice(i, 1);
+      }
+      if (gained.length) {
+        setDrawnCards((d) => ({
+          cards: prev.drawnThisTurn > 0 ? [...d.cards, ...gained] : gained,
+          key: d.key + 1,
+        }));
+      }
+    } else if (mine(next) && !mine(prev)) {
+      setDrawnCards((d) => ({ cards: [], key: d.key }));
     }
   }, [game.state, playerId]);
 
@@ -452,7 +497,7 @@ export function TicketToRideView({ game, playerId, onAction }: GameViewProps) {
             ? "No legal move is left: you may pass."
           : isMyTurn
             ? drawn > 0
-              ? "Take 1 more card (a face-up locomotive isn't allowed now)."
+              ? "Take 1 more card (a face-up rainbow isn't allowed now)."
               : "Draw 2 cards, claim a route, draw tickets, or build a station."
             : "Watch the map for their move.";
 
@@ -484,7 +529,7 @@ export function TicketToRideView({ game, playerId, onAction }: GameViewProps) {
           onClick={() => onPick(c)}
         >
           <span className="ttr-pay-swatch" style={{ background: cardBackground(c ?? "loco") }} />
-          {c ? `${cardName(c)} (${countOf(myHand, c)})` : "Locos only"}
+          {c ? `${cardName(c)} (${countOf(myHand, c)})` : "Rainbows only"}
         </button>
       ))}
     </div>
@@ -536,7 +581,15 @@ export function TicketToRideView({ game, playerId, onAction }: GameViewProps) {
                 ) : (
                   <span className="ttr-dot" style={{ background: "transparent", boxShadow: "none" }} />
                 )}
-                <span>{entry.by ? `${nameOf(entry.by)} ${entry.text}` : entry.text}</span>
+                <span>
+                  {entry.by ? `${nameOf(entry.by)} ${entry.text}` : entry.text}
+                  {entry.cards?.length ? (
+                    <span className="ttr-log-paid" aria-label={`paid ${describeCards(entry.cards)}`}>
+                      {" "}
+                      paid <PaymentPreview payment={entry.cards} />
+                    </span>
+                  ) : null}
+                </span>
               </li>
             ))}
           </ul>
@@ -568,6 +621,7 @@ export function TicketToRideView({ game, playerId, onAction }: GameViewProps) {
             selectedCity={selectedCity}
             onSelectCity={onSelectCity}
             highlightTicket={highlightTicket}
+            highlightPlayer={focusedPlayer}
             recent={recent}
           />
         </div>
@@ -575,7 +629,7 @@ export function TicketToRideView({ game, playerId, onAction }: GameViewProps) {
         <aside className="ttr-side" aria-label="Game panel">
           {ticketOffer("ttr-offer-side")}
 
-          {phase === "finished" && s.results && <Results state={s} nameOf={nameOf} />}
+          {phase === "finished" && s.results && <Results state={s} nameOf={nameOf} focus={playerFocus} hover={ticketHover} />}
 
           {phase !== "finished" && (
             <section className="ttr-card" aria-label="Turn actions">
@@ -596,7 +650,7 @@ export function TicketToRideView({ game, playerId, onAction }: GameViewProps) {
                     )}
                   </div>
                   <p className="ttr-pick-line">
-                    {myTunnel.extra} extra {myTunnel.payColor === "loco" ? "locomotive" : `${myTunnel.payColor} or locomotive`} card
+                    {myTunnel.extra} extra {myTunnel.payColor === "loco" ? "rainbow" : `${myTunnel.payColor} or rainbow`} card
                     {myTunnel.extra === 1 ? "" : "s"} needed.{" "}
                     {tunnelPay ? (
                       <>
@@ -642,7 +696,7 @@ export function TicketToRideView({ game, playerId, onAction }: GameViewProps) {
                   <p className="ttr-pick-meta">
                     {selectedRoute.length} {selectedRoute.color} · {routePoints(selectedRoute.length)} pts
                     {selectedRoute.locos > 0 &&
-                      ` · ferry, ${selectedRoute.locos} loco${selectedRoute.locos > 1 ? "s" : ""}`}
+                      ` · ferry, ${selectedRoute.locos} rainbow${selectedRoute.locos > 1 ? "s" : ""}`}
                     {selectedRoute.tunnel && " · tunnel (may cost extra)"}
                   </p>
                   {selectedRoute.color === "gray" &&
@@ -693,7 +747,7 @@ export function TicketToRideView({ game, playerId, onAction }: GameViewProps) {
                       </>
                     ) : (
                       <span className="ttr-bad">
-                        You need {stationCost} cards of one color (or locomotives).
+                        You need {stationCost} cards of one color (or rainbows).
                       </span>
                     )}
                   </p>
@@ -726,13 +780,13 @@ export function TicketToRideView({ game, playerId, onAction }: GameViewProps) {
               <div className="ttr-cardrow">
                 {s.faceUp.map((card, slot) => {
                   const lockedLoco = card === "loco" && drawn > 0;
-                  const reason = turnBlock ?? (lockedLoco ? "You can't take a face-up locomotive as your second card." : null);
+                  const reason = turnBlock ?? (lockedLoco ? "You can't take a face-up rainbow as your second card." : null);
                   return (
                     <button
                       key={`${slot}-${recent?.key ?? 0}`}
                       className={`ttr-cardbtn${recentSlots.includes(slot) ? " ttr-cardbtn-new" : ""}`}
                       disabled={busy || !!reason}
-                      title={reason ?? `Take the ${card} card`}
+                      title={reason ?? `Take the ${cardLabel(card)} card`}
                       aria-label={`Take face-up ${cardName(card)} card`}
                       onClick={() => run({ type: "drawFaceUp", slot })}
                     >
@@ -749,8 +803,24 @@ export function TicketToRideView({ game, playerId, onAction }: GameViewProps) {
               >
                 <span className="ttr-deck" aria-hidden="true" />
                 Draw blind from deck
-                <span className="ttr-deck-count">{s.deck.length} left</span>
+                <span
+                  className="ttr-deck-count"
+                  title="When the deck runs out, the discard pile is shuffled into a new deck."
+                >
+                  {s.deck.length} in deck · {s.discard.length} discarded
+                </span>
               </button>
+              {drawnCards.cards.length > 0 && (
+                <div className="ttr-drawn" key={drawnCards.key} aria-live="polite">
+                  <span>You drew</span>
+                  {drawnCards.cards.map((c, i) => (
+                    <CardFace key={i} card={c} size="sm" />
+                  ))}
+                  <span className="ttr-drawn-names">
+                    {drawnCards.cards.map((c) => cardLabel(c)).join(" + ")}
+                  </span>
+                </div>
+              )}
 
               <h4>Other actions</h4>
               <div className="ttr-btn-row" style={{ marginTop: 0 }}>
@@ -792,7 +862,7 @@ export function TicketToRideView({ game, playerId, onAction }: GameViewProps) {
 
           <section className="ttr-card" aria-label="Players">
             <h3>Players</h3>
-            <PlayersTable state={s} playerId={playerId} nameOf={nameOf} />
+            <PlayersTable state={s} playerId={playerId} nameOf={nameOf} focus={playerFocus} />
           </section>
 
           <section className="ttr-card ttr-rules" aria-label="Rules">

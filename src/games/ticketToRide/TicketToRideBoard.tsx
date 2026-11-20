@@ -142,6 +142,8 @@ interface BoardProps {
   onSelectCity: (city: string) => void;
   // Start and end cities of a ticket being hovered in the ticket list.
   highlightTicket: { from: string; to: string } | null;
+  // A player whose trains and stations stand out (everything else is faded).
+  highlightPlayer?: string | null;
   // The most recent claim or station, briefly highlighted. `key` restarts the animation.
   recent?: { routeId?: string; city?: string; key: number } | null;
 }
@@ -156,8 +158,14 @@ export function TicketToRideBoard({
   selectedCity,
   onSelectCity,
   highlightTicket,
+  highlightPlayer = null,
   recent,
 }: BoardProps) {
+  // While a player is highlighted, everything that isn't theirs fades back.
+  const focusOn = !!highlightPlayer && state.order.includes(highlightPlayer);
+  const fadeOf = (owner: string | undefined) =>
+    focusOn && owner !== highlightPlayer ? 0.2 : 1;
+  const fadeStyle = (opacity: number) => ({ opacity, transition: "opacity 120ms" });
   const [hover, setHover] = useState<Hover>(null);
   const hoverRoute = useCallback((route: RouteData) => setHover({ kind: "route", route }), []);
   const clearHover = useCallback(() => setHover(null), []);
@@ -208,35 +216,35 @@ export function TicketToRideBoard({
             <rect width={2} height={5} fill="#000" opacity={0.38} />
           </pattern>
         </defs>
-        {highlightTicket &&
-          [highlightTicket.from, highlightTicket.to].map((city) => {
-            const p = CITY_POS[city];
-            if (!p) return null;
-            return (
-              <circle
-                key={`hl-${city}`}
-                cx={p.x}
-                cy={p.y}
-                r={22}
-                fill="rgba(255, 111, 0, 0.22)"
-                stroke="#ff6f00"
-                strokeWidth={3}
+        <g style={fadeStyle(focusOn ? 0.3 : 1)}>
+          {open.map((route) => (
+            <OpenTrack
+              key={route.id}
+              route={route}
+              selected={route.id === selectedRouteId}
+              hovered={hover?.kind === "route" && hover.route.id === route.id}
+              onHover={hoverRoute}
+              onLeave={clearHover}
+              onSelect={onSelectRoute}
+            />
+          ))}
+        </g>
+
+        {/* Bright glow under every train of the highlighted player. */}
+        {focusOn &&
+          claimed
+            .filter((r) => state.owners[r.id] === highlightPlayer)
+            .map((r) => (
+              <line
+                key={`focus-${r.id}`}
+                {...GEOMETRY[r.id].span}
+                stroke="#ffd54f"
+                strokeWidth={CAR_WIDTH + 16}
+                strokeLinecap="round"
+                opacity={0.9}
                 style={{ pointerEvents: "none" }}
               />
-            );
-          })}
-
-        {open.map((route) => (
-          <OpenTrack
-            key={route.id}
-            route={route}
-            selected={route.id === selectedRouteId}
-            hovered={hover?.kind === "route" && hover.route.id === route.id}
-            onHover={hoverRoute}
-            onLeave={clearHover}
-            onSelect={onSelectRoute}
-          />
-        ))}
+            ))}
 
         {recentGeo && (
           <line
@@ -253,15 +261,16 @@ export function TicketToRideBoard({
         {claimed.map((route) => {
           const owner = state.owners[route.id];
           return (
-            <ClaimedTrain
-              key={route.id}
-              route={route}
-              color={colorOf(owner)}
-              initial={initialOf(owner)}
-              hovered={hover?.kind === "route" && hover.route.id === route.id}
-              onHover={hoverRoute}
-              onLeave={clearHover}
-            />
+            <g key={route.id} style={fadeStyle(fadeOf(owner))}>
+              <ClaimedTrain
+                route={route}
+                color={colorOf(owner)}
+                initial={initialOf(owner)}
+                hovered={hover?.kind === "route" && hover.route.id === route.id}
+                onHover={hoverRoute}
+                onLeave={clearHover}
+              />
+            </g>
           );
         })}
 
@@ -315,7 +324,12 @@ export function TicketToRideBoard({
                 />
               )}
               {owner ? (
-                <StationMarker x={p.x} y={p.y} color={colorOf(owner)} />
+                <g style={fadeStyle(fadeOf(owner))}>
+                  {focusOn && owner === highlightPlayer && (
+                    <circle cx={p.x} cy={p.y} r={16} fill="#ffd54f" opacity={0.9} />
+                  )}
+                  <StationMarker x={p.x} y={p.y} color={colorOf(owner)} />
+                </g>
               ) : (
                 <circle cx={p.x} cy={p.y} r={7} fill="#fff" stroke="#3a3a3a" strokeWidth={2.5} />
               )}
@@ -336,9 +350,80 @@ export function TicketToRideBoard({
             </g>
           );
         })}
+
+        {/* Hovered route: its two cities, drawn above everything. */}
+        {!highlightTicket && hover?.kind === "route" && (
+          <g style={{ pointerEvents: "none" }}>
+            {[hover.route.from, hover.route.to].map((city) => (
+              <CityCallout key={city} city={city} strong={false} />
+            ))}
+          </g>
+        )}
+
+        {/* Hovered ticket: the rest of the map dims and both cities stand out on top. */}
+        {highlightTicket && CITY_POS[highlightTicket.from] && CITY_POS[highlightTicket.to] && (
+          <g style={{ pointerEvents: "none" }}>
+            <rect width={BOARD_WIDTH} height={BOARD_HEIGHT} fill={MAP_BACKGROUND} opacity={0.55} />
+            <line
+              x1={CITY_POS[highlightTicket.from].x}
+              y1={CITY_POS[highlightTicket.from].y}
+              x2={CITY_POS[highlightTicket.to].x}
+              y2={CITY_POS[highlightTicket.to].y}
+              stroke="#e65100"
+              strokeWidth={3}
+              strokeDasharray="10 8"
+              strokeLinecap="round"
+              opacity={0.75}
+            />
+            {[highlightTicket.from, highlightTicket.to].map((city) => (
+              <CityCallout key={city} city={city} strong />
+            ))}
+          </g>
+        )}
       </svg>
       <Legend />
     </div>
+  );
+}
+
+// A highlighted city drawn on top of the map: a ring (pulsing when `strong`), the dot,
+// and its name on an orange tag.
+function CityCallout({ city, strong }: { city: string; strong: boolean }) {
+  const p = CITY_POS[city];
+  if (!p) return null;
+  const label = LABEL_POS[city] ?? DEFAULT_LABEL;
+  const text = cityLabel(city);
+  const color = strong ? "#e65100" : "#b26a00";
+  return (
+    <g>
+      {strong && (
+        <circle className="ttr-ticket-pulse" cx={p.x} cy={p.y} r={18} fill="none" stroke={color} strokeWidth={4} />
+      )}
+      <circle
+        cx={p.x}
+        cy={p.y}
+        r={strong ? 17 : 13}
+        fill={strong ? "rgba(255, 152, 0, 0.35)" : "rgba(255, 213, 79, 0.45)"}
+        stroke={color}
+        strokeWidth={strong ? 4 : 2.5}
+      />
+      <circle cx={p.x} cy={p.y} r={7} fill="#fff" stroke="#1f1f1f" strokeWidth={2.5} />
+      <text
+        x={p.x + label.dx}
+        y={p.y + label.dy}
+        textAnchor={label.anchor}
+        fontSize={strong ? 17 : 15}
+        fontWeight={800}
+        fill={strong ? "#fff" : "#1f1f1f"}
+        stroke={strong ? color : "#fff3c4"}
+        strokeWidth={strong ? 7 : 5}
+        strokeLinejoin="round"
+        paintOrder="stroke"
+        style={{ userSelect: "none" }}
+      >
+        {text}
+      </text>
+    </g>
   );
 }
 
@@ -397,7 +482,7 @@ const OpenTrack = memo(function OpenTrack({
         <g key={i}>
           <line x1={p.x1} y1={p.y1} x2={p.x2} y2={p.y2} stroke={borderColor} strokeWidth={borderWidth} />
           <line x1={p.x1} y1={p.y1} x2={p.x2} y2={p.y2} stroke={fill} strokeWidth={TRACK_WIDTH} />
-          {/* Ferry: the first pieces carry a locomotive mark, one per required locomotive. */}
+          {/* Ferry: the first pieces carry a dot, one per required rainbow card. */}
           {i < route.locos && (
             <circle cx={p.cx} cy={p.cy} r={2.3} fill="#fff" stroke="#000" strokeWidth={1.1} />
           )}
@@ -533,7 +618,7 @@ function HoverInfo({
         {cityLabel(r.from)} – {cityLabel(r.to)}
       </strong>{" "}
       · {r.length} {r.color} · {routePoints(r.length)} pts
-      {r.locos > 0 && ` · ferry: ${r.locos} locomotive${r.locos > 1 ? "s" : ""}`}
+      {r.locos > 0 && ` · ferry: ${r.locos} rainbow${r.locos > 1 ? "s" : ""}`}
       {r.tunnel && " · tunnel"} ·{" "}
       {owner ? (
         <strong>claimed by {names[owner] ?? owner}</strong>
@@ -554,9 +639,11 @@ function Legend() {
   );
   return (
     <div className="ttr-legend">
-      <span>Each piece = 1 train</span>
-      <span>{sample("#000", TRACK_WIDTH + 5, false)} tunnel</span>
-      <span>{sample("#5a5248", TRACK_WIDTH + 2.5, true)} ferry (dot = locomotive)</span>
+      <span title="When you claim a tunnel, 3 cards are flipped from the deck. Each one matching your route's color (or a rainbow) costs 1 extra card of that color or a rainbow. You can pay or give up; giving up ends your turn.">
+        {sample("#000", TRACK_WIDTH + 5, false)} tunnel: 3 cards are flipped when you claim it; pay
+        1 extra matching card for each one that matches your color
+      </span>
+      <span>{sample("#5a5248", TRACK_WIDTH + 2.5, true)} ferry: each dot needs a rainbow card</span>
       <span>
         <svg width={40} height={22} style={{ verticalAlign: "middle" }} aria-hidden="true">
           <line x1={4} y1={11} x2={36} y2={11} stroke={PLAYER_COLORS[0]} strokeWidth={CAR_WIDTH + 8} opacity={0.28} strokeLinecap="round" />

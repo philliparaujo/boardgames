@@ -44,6 +44,8 @@ export interface TicketOffer {
 export interface LogEntry {
   by: string | null; // player id, or null for system messages
   text: string;
+  // Cards paid for this move (claims and stations), shown as small card swatches.
+  cards?: CardColor[];
 }
 
 export interface PlayerScore {

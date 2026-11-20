@@ -2,6 +2,7 @@
 import { PointerEvent } from "react";
 import { ROUTES } from "./map/europe";
 import { TICKETS } from "./map/tickets";
+import { cardLabel } from "./deck";
 import { CARD_ORDER, countOf } from "./payment";
 import * as scoring from "./scoring";
 import { routePoints } from "./scoring";
@@ -15,7 +16,8 @@ export function cardBackground(c: CardColor): string {
 }
 
 export function cardName(c: CardColor): string {
-  return c === "loco" ? "Loco" : c.charAt(0).toUpperCase() + c.slice(1);
+  const label = cardLabel(c);
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 export function playerColor(state: TTRState, playerId: string): string {
@@ -67,7 +69,7 @@ export function PaymentPreview({ payment }: { payment: CardColor[] }) {
         return n > 0 ? (
           <span key={c} className="ttr-pay-item">
             <span className="ttr-pay-swatch" style={{ background: cardBackground(c) }} />
-            {n} {c}
+            {n} {cardLabel(c)}
           </span>
         ) : null;
       })}
@@ -94,6 +96,31 @@ function hoverProps(id: number, hover: TicketHover) {
     },
     onFocus: () => hover.set(id),
     onBlur: () => hover.set(null),
+  };
+}
+
+// A player whose trains and stations are highlighted on the map.
+export interface PlayerFocus {
+  active: string | null;
+  set: (playerId: string | null) => void;
+}
+
+// Hover (mouse), tap (touch) or keyboard focus highlights the player's pieces.
+function focusProps(playerId: string, focus: PlayerFocus | undefined) {
+  if (!focus) return {};
+  return {
+    tabIndex: 0,
+    onPointerEnter: (e: PointerEvent) => {
+      if (e.pointerType === "mouse") focus.set(playerId);
+    },
+    onPointerLeave: (e: PointerEvent) => {
+      if (e.pointerType === "mouse") focus.set(null);
+    },
+    onPointerUp: (e: PointerEvent) => {
+      if (e.pointerType !== "mouse") focus.set(focus.active === playerId ? null : playerId);
+    },
+    onFocus: () => focus.set(playerId),
+    onBlur: () => focus.set(null),
   };
 }
 
@@ -223,10 +250,12 @@ export function PlayersTable({
   state,
   playerId,
   nameOf,
+  focus,
 }: {
   state: TTRState;
   playerId: string;
   nameOf: (id: string | null) => string;
+  focus?: PlayerFocus;
 }) {
   const current = state.phase === "playing" ? state.order[state.current] : null;
   return (
@@ -249,7 +278,16 @@ export function PlayersTable({
           const isCurrent = pid === current;
           const trains = state.trains[pid] ?? 0;
           return (
-            <tr key={pid} className={isCurrent ? "ttr-player-current" : undefined}>
+            <tr
+              key={pid}
+              className={
+                [isCurrent && "ttr-player-current", focus?.active === pid && "ttr-player-focus"]
+                  .filter(Boolean)
+                  .join(" ") || undefined
+              }
+              title="Hover to highlight this player's trains on the map"
+              {...focusProps(pid, focus)}
+            >
               <td>
                 <span className="ttr-player-name">
                   <span className="ttr-dot" style={{ background: playerColor(state, pid) }} />
@@ -280,9 +318,13 @@ export function PlayersTable({
 export function Results({
   state,
   nameOf,
+  focus,
+  hover,
 }: {
   state: TTRState;
   nameOf: (id: string | null) => string;
+  focus?: PlayerFocus;
+  hover: TicketHover;
 }) {
   const results = state.results ?? {};
   const rows = state.order
@@ -318,7 +360,15 @@ export function Results({
             const done = extra(pid, "ticketsCompleted");
             const failed = extra(pid, "ticketsFailed");
             return (
-              <tr key={pid} className={winner ? "ttr-winner" : undefined}>
+              <tr
+                key={pid}
+                className={
+                  [winner && "ttr-winner", focus?.active === pid && "ttr-player-focus"]
+                    .filter(Boolean)
+                    .join(" ") || undefined
+                }
+                {...focusProps(pid, focus)}
+              >
                 <td>
                   <span className="ttr-player-name">
                     <span className="ttr-dot" style={{ background: playerColor(state, pid) }} />
@@ -355,8 +405,21 @@ export function Results({
       </table>
       <p className="ttr-note" style={{ marginTop: 6 }}>
         ★ longest continuous route (+10).{hasStations && " Unused stations score 4 each."} ✓/✗
-        completed and failed tickets.
+        completed and failed tickets. Hover a player to see their trains.
       </p>
+
+      <h4>Everyone's tickets</h4>
+      {rows.map((pid) => (
+        <details key={pid} className="ttr-player-tickets">
+          <summary {...focusProps(pid, focus)} tabIndex={undefined}>
+            <span className="ttr-player-name">
+              <span className="ttr-dot" style={{ background: playerColor(state, pid) }} />
+              {nameOf(pid)}
+            </span>
+          </summary>
+          <TicketList state={state} playerId={pid} hover={hover} />
+        </details>
+      ))}
     </section>
   );
 }

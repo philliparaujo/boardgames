@@ -16,6 +16,8 @@ export interface GameDefinition<S = unknown, A = unknown> {
   // Stored in Firestore as `gameType`. Must be unique (checked in registry.ts).
   type: string;
   title: string;
+  // One line shown when choosing which game to start.
+  summary?: string;
   minPlayers: number;
   maxPlayers: number;
   // Optional: turns an untrusted action into a typed one, or throws an Error.
